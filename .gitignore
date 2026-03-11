@@ -1,0 +1,13 @@
+# file dokumen & data
+*.txt
+*.xlsx
+*.xls
+*.csv
+
+# folder proyek
+output_clean/
+backup_sinkronisasi/
+
+# folder venv python
+venv/
+.venv/
