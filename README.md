@@ -14,7 +14,3 @@ FUNGSI SCRIPT
 3. sync_scrapper_detail.py
    
    Sinkronisasi data antara file master dengan file data hasil scrapping. digunakan untuk otomatis menghapus data perusahaan yang sudah tidak ada/hilang dari file master
-   
-4. cleaner_py
-   
-   Membersihkan dan menggabungkan data ke dalam satu folder untuk lebih mudah diolah/di migrasi ke database 
