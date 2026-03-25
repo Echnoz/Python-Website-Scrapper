@@ -30,6 +30,25 @@ def main():
             dropdown = Select(dropdown_element)
             dropdown.select_by_value("100") 
             time.sleep(10)  #jeda 10 detik
+
+            # [FIX] Verifikasi bahwa tabel sudah benar-benar reload ke 100 baris
+            # sebelum loop scraping dimulai. Tanpa ini, jika reload belum selesai
+            # saat sleep(10) habis, halaman pertama akan ter-scrape masih dalam
+            # kondisi 10 baris (default) — menyebabkan No 11-100 terlewat karena
+            # halaman ke-2 DataTables langsung dimulai dari No 101.
+            # Maks tunggu 30 detik tambahan, cek setiap 0.5 detik.
+            for _ in range(60):
+                time.sleep(0.5)
+                try:
+                    soup_cek = BeautifulSoup(driver.page_source, "html.parser")
+                    tabel_cek = soup_cek.find("table")
+                    if tabel_cek:
+                        jumlah_baris = len(tabel_cek.find("tbody").find_all("tr"))
+                        if jumlah_baris > 10:
+                            break  # tabel sudah reload ke 100 baris
+                except Exception:
+                    pass
+
             print("Load halaman berhasil")
         except Exception:
             print("Gagal mengubah dropdown, lanjut dengan default")
@@ -48,6 +67,19 @@ def main():
                 html_string = str(tabel_html)
                 df_sementara = pd.read_html(io.StringIO(html_string))[0]
                 semua_data.append(df_sementara)
+
+                # [FIX] Simpan teks baris pertama tabel halaman ini sebagai
+                # "tanda pengenal". Dipakai setelah klik Next untuk memastikan
+                # halaman baru benar-benar sudah ter-load sebelum loop berikutnya
+                # membaca page_source. Tanpa ini, page_source bisa masih
+                # menampilkan halaman lama jika loading lebih lambat dari sleep(10),
+                # menyebabkan halaman lama di-scrape ulang (duplikat) dan halaman
+                # baru terlewat (data hilang).
+                try:
+                    tanda_baris_pertama = tabel_html.find("tbody").find("tr").get_text(strip=True)
+                except Exception:
+                    tanda_baris_pertama = ""
+
             else:
                 print("Tabel tidak ditemukan di halaman ini")
                 break
@@ -76,6 +108,23 @@ def main():
                 driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", tombol_next)
                 time.sleep(1) 
                 driver.execute_script("arguments[0].click();", tombol_next)
+
+                # [FIX] Tunggu sampai baris pertama tabel berubah dari halaman sebelumnya.
+                # Ini memastikan browser sudah benar-benar menampilkan halaman baru
+                # sebelum loop berikutnya membaca page_source.
+                # Maks tunggu 30 detik, cek setiap 0.5 detik.
+                if tanda_baris_pertama:
+                    for _ in range(60):
+                        time.sleep(0.5)
+                        try:
+                            soup_cek = BeautifulSoup(driver.page_source, "html.parser")
+                            tabel_cek = soup_cek.find("table")
+                            if tabel_cek:
+                                tanda_baru = tabel_cek.find("tbody").find("tr").get_text(strip=True)
+                                if tanda_baru != tanda_baris_pertama:
+                                    break  # halaman baru sudah ter-load
+                        except Exception:
+                            pass
                 
                 halaman += 1
                 
