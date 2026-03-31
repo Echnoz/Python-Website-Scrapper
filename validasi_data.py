@@ -1,13 +1,3 @@
-"""
-validasi_kelengkapan_data.py
-============================
-Cek apakah semua perusahaan di file master sudah tersimpan
-di keempat file CSV hasil scraping, dan laporkan yang belum.
-
-Cara pakai:
-  python validasi_kelengkapan_data.py
-"""
-
 import os
 import pandas as pd
 from collections import Counter
@@ -24,7 +14,6 @@ KOLOM_NAMA_FILE   = "Nama Perusahaan Asal"
 
 
 def baca_nama_set(path):
-    """Baca semua nama unik dari kolom Nama Perusahaan Asal di file CSV."""
     if not os.path.exists(path):
         return None, f"FILE TIDAK DITEMUKAN: {path}"
     try:
@@ -39,7 +28,7 @@ def baca_nama_set(path):
 
 def main():
     print("=" * 65)
-    print("Validasi Kelengkapan Data Scraping — minerbaone")
+    print("Validasi Data")
     print("=" * 65)
 
     # ── 1. Baca master ──────────────────────────────────────────
@@ -54,7 +43,6 @@ def main():
     print(f"\nFile master     : {len(semua_nama):,} entri, "
           f"{len(nama_master_set):,} nama unik")
 
-    # ── 2. Baca setiap file output ──────────────────────────────
     files = {
         "1_Informasi_Badan_Usaha" : FILE_INFO,
         "2_Susunan_Direksi"       : FILE_DIREKSI,
@@ -70,19 +58,13 @@ def main():
         print(f"  {status} {label}: {info}")
         hasil[label] = nama_set
 
-    # ── 3. Analisis per nama ────────────────────────────────────
     print("\n" + "=" * 65)
     print("HASIL ANALISIS")
     print("=" * 65)
 
-    # Nama di master yang TIDAK ada di FILE_INFO sama sekali
     info_set = hasil.get("1_Informasi_Badan_Usaha") or set()
     hilang_dari_info = sorted(nama_master_set - info_set)
 
-    # Untuk setiap nama yang ADA di FILE_INFO, cek file lainnya
-    # Catatan: file direksi/saham bisa kosong untuk perusahaan tertentu
-    # (tidak punya direksi/saham/perizinan yang tercatat), jadi ini
-    # hanya laporan informatif, bukan error pasti
     laporan_per_file = {}
     for label, nama_set in hasil.items():
         if nama_set is None:
@@ -91,7 +73,6 @@ def main():
         hilang = sorted(nama_master_set - nama_set)
         laporan_per_file[label] = hilang
 
-    # ── 4. Tampilkan ringkasan ──────────────────────────────────
     print(f"\n[1] Perusahaan yang BELUM ada di 1_Informasi_Badan_Usaha "
           f"({len(hilang_dari_info)} nama):")
     if not hilang_dari_info:
@@ -107,25 +88,21 @@ def main():
         if hilang is None:
             print(f"[!] {label}: tidak bisa dicek (file tidak ada)")
             continue
-        # Hanya tampilkan yang hilang dari INFO juga (yang memang belum di-scrape)
-        # vs yang memang tidak punya data di file ini
         hilang_juga_dari_info = [n for n in hilang if n in hilang_dari_info]
         hilang_hanya_file_ini = [n for n in hilang if n not in hilang_dari_info]
         print(f"[{label}]")
         print(f"  Hilang karena belum di-scrape : {len(hilang_juga_dari_info)}")
-        print(f"  Ada di info tapi tidak di sini: {len(hilang_hanya_file_ini)} "
-              f"(mungkin tidak punya data di bagian ini)")
+        print(f"  Ada di file 1 tapi tidak ada di sini: {len(hilang_hanya_file_ini)} ")
         if hilang_hanya_file_ini and len(hilang_hanya_file_ini) <= 30:
             for n in hilang_hanya_file_ini[:30]:
                 print(f"    - {n}")
         elif hilang_hanya_file_ini:
-            print(f"    (terlalu banyak — lihat file laporan untuk daftar lengkap)")
+            print(f"    (terlalu banyak, lihat file laporan untuk daftar lengkap)")
         print()
 
-    # ── 5. Simpan laporan lengkap ───────────────────────────────
     from datetime import datetime
     with open(FILE_LAPORAN, "w", encoding="utf-8") as f:
-        f.write(f"Laporan Validasi Kelengkapan Data\n")
+        f.write(f"Laporan Validasi Data\n")
         f.write(f"Waktu  : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write(f"Master : {len(semua_nama):,} entri, {len(nama_master_set):,} unik\n")
         f.write("=" * 65 + "\n\n")
@@ -146,7 +123,7 @@ def main():
                 f.write(f"  - {n}\n")
             f.write("\n")
 
-    print(f"Laporan lengkap disimpan → {FILE_LAPORAN}")
+    print(f"Laporan lengkap disimpan di {FILE_LAPORAN}")
     print("=" * 65)
 
 
