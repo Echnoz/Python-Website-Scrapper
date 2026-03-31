@@ -5,7 +5,7 @@
 *.csv
 
 # folder proyek
-output_clean/
+cleaned/
 backup_sinkronisasi/
 
 # folder venv python

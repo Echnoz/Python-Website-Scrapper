@@ -14,7 +14,7 @@ INPUT_FILES = {
     "4_Daftar_Perizinan":      "4_Daftar_Perizinan.csv",
 }
 
-OUTPUT_BASE = Path("output_cleaned")
+OUTPUT_BASE = Path("cleaned")
 OUTPUT_DIR  = OUTPUT_BASE / _RUN_TIMESTAMP
 OUTPUT_BASE.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
