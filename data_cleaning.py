@@ -188,7 +188,7 @@ def parse_date_indonesia(val):
         day, mon_str, yr = m.group(1), m.group(2).lower(), m.group(3)
         mon = BULAN_ID.get(mon_str) or MONTH_EN_ABBR.get(mon_str[:3])
         if mon:
-            return f"{int(day):02d}/{mon}/{yr}"  # [FIX-9]
+            return f"{int(day):02d}/{mon}/{yr}"
 
     m = re.fullmatch(r"(\d{1,2})-([A-Za-z]{3})-(\d{2,4})", s)
     if m:
@@ -197,22 +197,22 @@ def parse_date_indonesia(val):
         if mon:
             if len(yr) == 2:
                 yr = "20" + yr
-            return f"{int(day):02d}/{mon}/{yr}"  # [FIX-9]
+            return f"{int(day):02d}/{mon}/{yr}"
 
     m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", s)
     if m:
-        return f"{m.group(3)}/{m.group(2)}/{m.group(1)}"  # [FIX-9]
+        return f"{m.group(3)}/{m.group(2)}/{m.group(1)}"
 
     m = re.fullmatch(r"(\d{1,2})/(\d{1,2})/(\d{2,4})", s)
     if m:
         day, mon, yr = m.group(1), m.group(2), m.group(3)
         if len(yr) == 2:
             yr = "20" + yr
-        return f"{int(day):02d}/{int(mon):02d}/{yr}"  # [FIX-9]
+        return f"{int(day):02d}/{int(mon):02d}/{yr}"
 
     m = re.fullmatch(r"(\d{2})-(\d{2})-(\d{4})", s)
     if m:
-        return f"{m.group(1)}/{m.group(2)}/{m.group(3)}"  # [FIX-9]
+        return f"{m.group(1)}/{m.group(2)}/{m.group(3)}"
 
     print(f"  [WARN] Tanggal tidak dapat di-parse: {s!r}")
     return s
@@ -242,6 +242,21 @@ def clean_no(val):
         return int(float(str(val).strip()))
     except (ValueError, TypeError):
         return None
+
+
+def clean_no_with_default(val):
+    """
+    Sama seperti clean_no, tetapi pseudo-null ('tidak ada data', '-', kosong)
+    dikembalikan sebagai 0, bukan None.
+    """
+    if val is None or (isinstance(val, float) and np.isnan(val)):
+        return 0
+    if str(val).strip().lower() in PSEUDO_NULL_VALUES:
+        return 0
+    try:
+        return int(float(str(val).strip()))
+    except (ValueError, TypeError):
+        return 0
 
 
 def clean_decimal_fixed(val):
@@ -392,11 +407,11 @@ def clean_dataframe(df_raw, file_key):
         df["jenis_kepemilikan"] = df["jenis_kepemilikan"].apply(clean_jenis_kepemilikan)
         print("  [ENUM] jenis_kepemilikan: numerik → NULL")
 
-    #integer nullable
+    #integer nullable diubah menjadi 0 
     if "no" in df.columns:
-        df["no"] = df["no"].apply(clean_no)
+        df["no"] = df["no"].apply(clean_no_with_default)
         df["no"] = pd.array(df["no"], dtype=pd.Int64Dtype())
-        print("  [DTYPE] no → Integer nullable")
+        print("  [DTYPE] no → Integer nullable (pseudo-null → 0)")
 
     #persentase_saham
     if "persentase_saham" in df.columns:
