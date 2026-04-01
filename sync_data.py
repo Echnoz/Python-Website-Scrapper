@@ -5,8 +5,9 @@ Guide:
   3. set mode DRY_RUN ke 'True' untuk menampilkan perubahan saja 
 
 Catatan:
-  Script otomatis membuat backup sebelum menghapus data
-  Backup disimpan di folder 'backup_sinkronisasi/'
+  1. Mode DRY_RUN ada di baris/line ke-18  
+  2. Script otomatis membuat backup sebelum menghapus data
+     Backup disimpan di folder 'backup_sinkronisasi/'
 """
 
 import os
