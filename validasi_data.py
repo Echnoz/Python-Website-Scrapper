@@ -39,18 +39,12 @@ def main():
     print("Validasi Data")
     print("=" * 65)
 
-    # ── 1. Baca master ──────────────────────────────────────────
     if not os.path.exists(FILE_MASTER):
         print(f"\n[ERROR] File master tidak ditemukan: {FILE_MASTER}")
         return
 
     df_master = pd.read_csv(FILE_MASTER, dtype=str)
     semua_nama_raw = df_master[KOLOM_NAMA_MASTER].dropna().astype(str).str.strip().tolist()
-    # [FIX] Normalisasi whitespace sebelum membandingkan dengan file hasil scraping.
-    # File master bisa mengandung tab tersembunyi di nama (contoh: 'ARINDAMA\tENERGI SEMESTA')
-    # sedangkan file hasil scraping sudah dinormalisasi menjadi spasi tunggal
-    # ('ARINDAMA ENERGI SEMESTA'). Tanpa normalisasi ini, nama yang sama akan
-    # dianggap berbeda dan dilaporkan sebagai "belum di-scrape" secara keliru.
     semua_nama = [normalisasi_whitespace(n) for n in semua_nama_raw]
     nama_master_set    = set(semua_nama)
     nama_master_counter = Counter(semua_nama)
