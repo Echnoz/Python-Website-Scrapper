@@ -1,4 +1,5 @@
 import os
+import re
 import pandas as pd
 from collections import Counter
 
@@ -7,10 +8,17 @@ FILE_INFO      = "1_Informasi_Badan_Usaha.csv"
 FILE_DIREKSI   = "2_Susunan_Direksi.csv"
 FILE_SAHAM     = "3_Pemegang_Saham.csv"
 FILE_PERIZINAN = "4_Daftar_Perizinan.csv"
-FILE_LAPORAN   = "laporan_validasi_kelengkapan.txt"
+FILE_LAPORAN   = "log_validasi_data.txt"
 
 KOLOM_NAMA_MASTER = "Nama Badan Usaha"
 KOLOM_NAMA_FILE   = "Nama Perusahaan Asal"
+
+
+def normalisasi_whitespace(nama):
+    """Ganti tab/newline dengan spasi, collapse spasi ganda, strip ujung."""
+    nama = re.sub(r'[\t\n\r]+', ' ', str(nama))
+    nama = re.sub(r' {2,}', ' ', nama)
+    return nama.strip()
 
 
 def baca_nama_set(path):
@@ -37,7 +45,13 @@ def main():
         return
 
     df_master = pd.read_csv(FILE_MASTER, dtype=str)
-    semua_nama = df_master[KOLOM_NAMA_MASTER].dropna().astype(str).str.strip().tolist()
+    semua_nama_raw = df_master[KOLOM_NAMA_MASTER].dropna().astype(str).str.strip().tolist()
+    # [FIX] Normalisasi whitespace sebelum membandingkan dengan file hasil scraping.
+    # File master bisa mengandung tab tersembunyi di nama (contoh: 'ARINDAMA\tENERGI SEMESTA')
+    # sedangkan file hasil scraping sudah dinormalisasi menjadi spasi tunggal
+    # ('ARINDAMA ENERGI SEMESTA'). Tanpa normalisasi ini, nama yang sama akan
+    # dianggap berbeda dan dilaporkan sebagai "belum di-scrape" secara keliru.
+    semua_nama = [normalisasi_whitespace(n) for n in semua_nama_raw]
     nama_master_set    = set(semua_nama)
     nama_master_counter = Counter(semua_nama)
     print(f"\nFile master     : {len(semua_nama):,} entri, "
@@ -73,10 +87,10 @@ def main():
         hilang = sorted(nama_master_set - nama_set)
         laporan_per_file[label] = hilang
 
-    print(f"\n[1] Perusahaan yang BELUM ada di 1_Informasi_Badan_Usaha "
+    print(f"\n[1_Informasi_Badan_Usaha] "
           f"({len(hilang_dari_info)} nama):")
     if not hilang_dari_info:
-        print("    → Semua perusahaan sudah tersimpan ✓")
+        print("Semua perusahaan sudah tersimpan ✓")
     else:
         for i, n in enumerate(hilang_dari_info, 1):
             print(f"    {i:>4}. {n}")
