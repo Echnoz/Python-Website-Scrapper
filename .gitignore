@@ -7,6 +7,7 @@
 # folder proyek
 cleaned/
 backup_sinkronisasi/
+backup_file_master/
 
 # folder venv python
 venv/
