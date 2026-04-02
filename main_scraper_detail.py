@@ -31,7 +31,7 @@ FILE_PERIZINAN = "4_Daftar_Perizinan.csv"
 FILE_ERROR     = "daftar_error.txt"
 FILE_DIAG      = "diagnostik_html.txt"
 
-MODE_DIAGNOSTIK  = False
+MODE_DIAGNOSTIK  = False #True untuk masuk ke mode diagnostik/testing
 DIAG_MAX_SAMPEL  = 3
 
 KOLOM_STANDAR_DIREKSI = [
@@ -79,18 +79,21 @@ KODE_BU_BATAS_DIGIT = 15
 
 KOLOM_NUMERIK_SAHAM = ('persentase saham', 'persentase')
 
-#UTILITY
+#Utility
 def normalisasi(teks):
     return re.sub(r'\s+', ' ', str(teks).strip().lower())
 
+
 def nospace(teks):
     return re.sub(r'\s+', '', str(teks).strip().lower())
+
 
 def sanitasi_nama(nama):
     nama = re.sub(r'[\t\n\r]+', ' ', str(nama))
     nama = nama.strip()
     nama = re.sub(r' {2,}', ' ', nama)
     return nama
+
 
 def lindungi_kode_bu(nilai):
     if nilai in ("-", "", None):
@@ -99,6 +102,7 @@ def lindungi_kode_bu(nilai):
     if re.match(r'^\d+$', bersih) and len(bersih) > KODE_BU_BATAS_DIGIT:
         return f"'{bersih}"
     return bersih
+
 
 def format_angka_aman(nilai):
     if nilai is None:
@@ -121,6 +125,7 @@ def format_angka_aman(nilai):
     except (ValueError, TypeError, decimal.InvalidOperation):
         return nilai
 
+
 def init_driver():
     options = webdriver.ChromeOptions()
     options.add_argument("--disable-notifications")
@@ -130,6 +135,7 @@ def init_driver():
     driver = webdriver.Chrome(options=options)
     driver.set_page_load_timeout(30)
     return driver, WebDriverWait(driver, 15)
+
 
 def tutup_popup(driver):
     for sel in [
@@ -145,6 +151,7 @@ def tutup_popup(driver):
         except Exception:
             pass
 
+
 def tunggu_loading_selesai(wait, driver, timeout=15):
     try:
         wait.until_not(EC.presence_of_element_located((By.XPATH,
@@ -159,6 +166,28 @@ def tunggu_loading_selesai(wait, driver, timeout=15):
         )
     except TimeoutException:
         pass
+
+
+def tunggu_tabel_detail_selesai(driver, timeout=30):
+    sentinel_loading = ('memuat...', 'loading...')
+    for _ in range(timeout * 2):  #cek setiap 0.5 detik
+        time.sleep(0.5)
+        try:
+            soup   = BeautifulSoup(driver.page_source, "html.parser")
+            tabel_list = soup.find_all("table")
+            if not tabel_list:
+                continue
+            masih_loading = False
+            for tabel in tabel_list:
+                teks_tabel = tabel.get_text(separator=" ", strip=True).lower()
+                if any(s in teks_tabel for s in sentinel_loading):
+                    masih_loading = True
+                    break
+            if not masih_loading:
+                return  #semua tabel sudah selesai dimuat
+        except Exception:
+            pass
+
 
 def dump_diagnostik(driver, nama, tahap):
     global _diag_counter
@@ -189,11 +218,13 @@ def _bersih_tad(df):
     mask_valid = df['Nama Perusahaan Asal'].astype(str).str.strip().str.lower() != 'tidak ada data'
     return df[mask_valid].copy()
 
+
 def _fillna_aman(df):
     for col in df.columns:
         if col != 'Nama Perusahaan Asal':
             df[col] = df[col].fillna('Tidak ada data')
     return df
+
 
 def penyimpanan(nama_file, data_baru, kunci_dedup=None):
     if not data_baru:
@@ -233,7 +264,7 @@ def penyimpanan(nama_file, data_baru, kunci_dedup=None):
     df_final = pd.concat([df_old, df_new], ignore_index=True) if not df_old.empty else df_new
     _fillna_aman(df_final).to_csv(nama_file, index=False)
 
-#verifikasi supaya anti ghost scrape
+#Verifikasi halaman detail (anti ghosts-scraping)
 def verifikasi_halaman_detail(driver, wait, nama_target):
     try:
         soup  = BeautifulSoup(driver.page_source, "html.parser")
@@ -266,9 +297,10 @@ def verifikasi_halaman_detail(driver, wait, nama_target):
         print(f"  [!] Error verifikasi: {e}")
         return False
 
-#finder tombol detail
+#Finder tombol detail
 def semua_kata_ada(nama_target, teks_baris):
     return all(k in teks_baris.lower() for k in nama_target.lower().split())
+
 
 def hitung_skor(nama_normal, teks_kandidat):
     teks   = normalisasi(teks_kandidat)
@@ -282,6 +314,7 @@ def hitung_skor(nama_normal, teks_kandidat):
     if nama_n in teks:                    return int(150 * rasio)
     if semua_kata_ada(nama_n, teks):      return int(100 * rasio)
     return 0
+
 
 def cari_tombol_detail_untuk_nama(driver, nama):
     nama_normal = nama.strip().lower()
@@ -365,7 +398,7 @@ def cari_tombol_detail_untuk_nama(driver, nama):
         return kandidat_c[0][1], kandidat_c[0][0]
     return None, 0
 
-#pagination
+#Pagination
 def hitung_total_hasil(driver):
     soup = BeautifulSoup(driver.page_source, "html.parser")
     for el in soup.find_all(string=True):
@@ -380,6 +413,7 @@ def hitung_total_hasil(driver):
                 except ValueError:
                     pass
     return None
+
 
 def ubah_entries_per_halaman(driver, wait, target):
     xpath = ("//select[@name='DataTables_Table_0_length' or contains(@name,'_length') "
@@ -410,6 +444,7 @@ def ubah_entries_per_halaman(driver, wait, target):
         except (ValueError, TypeError):
             pass
     return False
+
 
 def _cari_elemen_next(driver):
     for xp in [
@@ -444,6 +479,7 @@ def _cari_elemen_next(driver):
                 continue
     return None
 
+
 def navigasi_ke_halaman_berikutnya(driver, wait):
     el = _cari_elemen_next(driver)
     if el is None:
@@ -467,13 +503,15 @@ def navigasi_ke_halaman_berikutnya(driver, wait):
     except Exception:
         baris_ssd = ""
     if url_sbl != driver.current_url or baris_sbl != baris_ssd:
-        print(f"  [Pagination] ✓ Tombol 'Next' berfungsi (pindah ke halaman berikutnya)")
+        print(f"  [Pagination] ✓ Pindah ke halaman berikutnya")
         return True
-    print(f"  [Pagination] ✗ Tombol 'Next' tidak berfungsi (halaman tidak berubah)")
+    print(f"  [Pagination] ✗ Klik Next tidak mengubah halaman")
     return False
+
 
 def apakah_ada_halaman_berikutnya(driver):
     return _cari_elemen_next(driver) is not None
+
 
 def atur_pagination_dan_cari(driver, wait, nama):
     total = hitung_total_hasil(driver)
@@ -488,7 +526,7 @@ def atur_pagination_dan_cari(driver, wait, nama):
     else:             ubah_entries_per_halaman(driver, wait, 100)
     return total
 
-#search bar
+#Search bar
 def _hitung_hasil_saat_ini(driver):
     try:
         return sum(1 for t in driver.find_elements(By.XPATH,
@@ -496,6 +534,7 @@ def _hitung_hasil_saat_ini(driver):
             "contains(@class,'btn-water-color-blue')]") if t.is_displayed())
     except Exception:
         return 0
+
 
 def isi_search_bar_adaptif(driver, wait, search_box, nama):
     for i in range(len(nama.strip().split()), 0, -1):
@@ -516,10 +555,12 @@ def isi_search_bar_adaptif(driver, wait, search_box, nama):
     print(f"  [Search] Semua variasi gagal untuk '{nama}'.")
     return nama
 
+
 XPATH_SEARCH = ("//input[@type='search' or contains(@placeholder,'Cari') "
                 "or contains(@placeholder,'Search')]")
 XPATH_TOMBOL = ("//button[contains(text(),'Detail') or "
                 "contains(@class,'btn-water-color-blue')]")
+
 
 def _navigasi_ke_halaman_daftar_dan_cari(driver, wait, nama):
     driver.get(BASE_URL)
@@ -535,7 +576,7 @@ def _navigasi_ke_halaman_daftar_dan_cari(driver, wait, nama):
         dump_diagnostik(driver, nama, "tidak_ada_tombol_detail")
         return False
 
-#logic search & validation perusahaan biasa (non-kembar)
+#Search dan validasi perusahaan normal (non-kembar)
 def cari_dan_validasi(driver, wait, nama):
     if not _navigasi_ke_halaman_daftar_dan_cari(driver, wait, nama):
         return False
@@ -567,6 +608,7 @@ def cari_dan_validasi(driver, wait, nama):
     print(f"  [Pagination] Menggunakan kandidat skor={terbaik[1]}.")
     return _klik_dan_verifikasi(driver, wait, terbaik[0], nama)
 
+
 def _klik_dan_verifikasi(driver, wait, tombol, nama):
     try:
         driver.execute_script("arguments[0].scrollIntoView({block:'center'});", tombol)
@@ -587,10 +629,11 @@ def _klik_dan_verifikasi(driver, wait, tombol, nama):
         print(f"  [!] Halaman detail tidak muncul untuk '{nama}'.")
         return False
     tunggu_loading_selesai(wait, driver)
+    tunggu_tabel_detail_selesai(driver)
     dump_diagnostik(driver, nama, "halaman_detail")
     return verifikasi_halaman_detail(driver, wait, nama)
 
-#logic search & validation perusahaan kembar
+#Search dan validasi perusahaan kembar
 def baca_baris_daftar(driver, nama):
     soup        = BeautifulSoup(driver.page_source, "html.parser")
     baris_td    = [b for b in soup.find_all("tr") if b.find_all("td")]
@@ -615,6 +658,7 @@ def baca_baris_daftar(driver, nama):
         })
     return hasil
 
+
 def sidik_baris_daftar(baris):
     return "|".join([baris["jenis_badan_usaha"],
                      baris["jenis_perizinan"],
@@ -626,6 +670,7 @@ def sidik_konten_saja(baris):
     return "|".join([baris["jenis_badan_usaha"],
                      baris["jenis_perizinan"],
                      baris["alamat"]])
+
 
 def seed_sidik_dari_file(nama):
     if not os.path.exists(FILE_INFO):
@@ -641,6 +686,7 @@ def seed_sidik_dari_file(nama):
         return seed_counter
     except Exception:
         return Counter()
+
 
 def _kumpulkan_kandidat_kembar(driver, wait, nama, sidik_set_persistent=None):
     if sidik_set_persistent is None:
@@ -692,7 +738,7 @@ def _kumpulkan_kandidat_kembar(driver, wait, nama, sidik_set_persistent=None):
         ]
         if tambahan:
             print(f"  [Kembar] Query pendek '{query_pendek}' menemukan "
-                  f"{len(tambahan)} baris tambahan")
+                  f"{len(tambahan)} baris tambahan.")
             kandidat.extend(tambahan)
             sidik_diketahui.update(sk for _, _, sk, _ in tambahan)
         if len(sidik_diketahui) > 1:
@@ -700,22 +746,23 @@ def _kumpulkan_kandidat_kembar(driver, wait, nama, sidik_set_persistent=None):
 
     return kandidat
 
+
 def cari_dan_validasi_kembar(driver, wait, nama, sidik_sudah_diambil):
     sidik_set, seed_counter = sidik_sudah_diambil
 
     semua_kandidat = _kumpulkan_kandidat_kembar(driver, wait, nama, sidik_set)
 
     if not semua_kandidat:
-        print(f"  [!] Tidak ada baris yang cocok untuk '{nama}'.")
+        print(f"  [!] Tidak ada baris cocok untuk '{nama}'.")
         return False
 
     sidik_konten_unik = {sidik_konten_saja(b) for _, _, _, b in semua_kandidat}
     if len(semua_kandidat) == 1:
-        print(f"  [Kembar] Peringatan: hanya 1 baris ditemukan "
-              f"Perusahaan kembar lainnya mungkin tidak muncul di hasil pencarian")
+        print(f"  [Kembar] Peringatan: hanya 1 baris ditemukan. "
+              f"Baris kembar lainnya mungkin tidak muncul di hasil pencarian.")
     elif len(sidik_konten_unik) == 1:
         print(f"  [Kembar] Semua {len(semua_kandidat)} baris punya konten identik "
-              f"dibedakan hanya via dom_idx")
+              f"— dibedakan hanya via dom_idx.")
 
     for dom_idx, hal_k, sk, baris_dict in semua_kandidat:
         print(f"\n  [Kembar] Coba DOM#{dom_idx} hal={hal_k} | '{sk[:60]}'")
@@ -724,16 +771,16 @@ def cari_dan_validasi_kembar(driver, wait, nama, sidik_sudah_diambil):
         sk_konten = sidik_konten_saja(baris_dict)
 
         if sk in sidik_set:
-            print(f"  [Kembar] Sudah diambil (sidik lengkap) - SKIP")
+            print(f"  [Kembar] Sudah diambil (sidik lengkap) → skip.")
             continue
 
         if sk_konten in sidik_set:
-            print(f"  [Kembar] Sudah diambil (sidik konten, dom_idx berbeda) - SKIP")
+            print(f"  [Kembar] Sudah diambil (sidik konten, dom_idx berbeda) → skip.")
             continue
 
         if seed_counter.get(sk_seed, 0) > 0:
             seed_counter[sk_seed] -= 1
-            print(f"  [Kembar] Sudah diambil (seed resume, sisa={seed_counter[sk_seed]}) - SKIP")
+            print(f"  [Kembar] Sudah diambil (seed resume, sisa={seed_counter[sk_seed]}) → skip.")
             continue
 
         query_dipakai = baris_dict.get("query_dipakai", nama)
@@ -765,10 +812,10 @@ def cari_dan_validasi_kembar(driver, wait, nama, sidik_sudah_diambil):
             sidik_set.add(sk_konten)
             return True
 
-    print(f"  [!] Semua {len(semua_kandidat)} kandidat sudah diambil / tidak valid")
+    print(f"  [!] Semua {len(semua_kandidat)} kandidat sudah diambil / tidak valid.")
     return False
 
-#parsing
+#Parsing
 def parse_info(soup, nama):
     info_dict = {'Nama Perusahaan Asal': nama}
     for kunci in KUNCI_PENCARIAN:
@@ -821,6 +868,7 @@ def parse_info(soup, nama):
             info_dict[kunci] = "-"
     return info_dict
 
+
 def _tabel_isi_kosong(df):
     df_bersih = df.dropna(how='all')
     if df_bersih.empty:
@@ -844,12 +892,14 @@ def _tabel_isi_kosong(df):
         return True
     return False
 
+
 _KUNCI_DIREKSI   = ('nama direksi', 'jabatan', 'direksi', 'komisaris',
                     'nama direktur', 'nama komisaris')
 _KUNCI_SAHAM     = ('persentase saham', 'jenis kepemilikan', 'pemegang saham',
                     'nama pemegang', 'persentase')
 _KUNCI_PERIZINAN = ('nomor izin', 'tahap kegiatan', 'modi id', 'kode wiup',
                     'jenis izin', 'status cnc')
+
 
 def parse_tabel(soup, nama, kode_bu="-"):
     data_d, data_s, data_p = [], [], []
@@ -883,12 +933,13 @@ def parse_tabel(soup, nama, kode_bu="-"):
             print(f"  [parse_tabel] Tabel gagal di-parse untuk '{nama}': {e}")
     return data_d, data_s, data_p
 
-#scraping satu perusahaan
+#Scraping per-perusahaan (satu perusahaan)
 def _buat_placeholder(nama, kode_bu, kolom_standar):
     row = {c: 'Tidak ada data' for c in kolom_standar}
     row['Nama Perusahaan Asal'] = nama
     row['Kode Badan Usaha'] = kode_bu
     return pd.DataFrame([row])
+
 
 def _simpan_hasil(driver, nama):
     soup = BeautifulSoup(driver.page_source, "html.parser")
@@ -912,6 +963,7 @@ def _simpan_hasil(driver, nama):
     penyimpanan(FILE_PERIZINAN, data_p,
                 kunci_dedup=["Nama Perusahaan Asal", "nomor izin", "modi id"])
 
+
 def scrape_perusahaan(driver, wait, nama):
     for attempt in range(1, MAX_RETRY + 1):
         try:
@@ -928,6 +980,7 @@ def scrape_perusahaan(driver, wait, nama):
             print(f"  [Percobaan {attempt}/{MAX_RETRY}] Error: {e}")
             time.sleep(5 * attempt)
     return False
+
 
 def scrape_perusahaan_kembar(driver, wait, nama, sidik_sudah_diambil):
     for attempt in range(1, MAX_RETRY + 1):
@@ -958,6 +1011,7 @@ def baca_counter_selesai():
         except Exception:
             pass
     return counter
+
 
 def main():
     if MODE_DIAGNOSTIK:
@@ -1001,10 +1055,10 @@ def main():
             daftar_antrean.append(nk)
 
     if not daftar_antrean:
-        print("Semua data sudah selesai di scrape")
+        print("Semua data sudah selesai di scraping.")
         return
 
-    print(f"Memulai scraping — sisa {len(daftar_antrean)} perusahaan")
+    print(f"Memulai scraping — sisa {len(daftar_antrean)} entri.")
     driver, wait = init_driver()
     sesi_counter = 0
     total_sukses = 0
@@ -1058,7 +1112,8 @@ def main():
 
     print(f"\n{'='*50}\nScraping selesai\n"
           f"  Berhasil : {total_sukses}\n"
-          f"  Gagal    : {total_gagal} (ada di '{FILE_ERROR}')\n{'='*50}")
+          f"  Gagal    : {total_gagal} (lihat '{FILE_ERROR}')\n{'='*50}")
+
 
 if __name__ == "__main__":
     main()
