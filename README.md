@@ -21,4 +21,15 @@ FUNGSI SCRIPT
 
 5. data_cleaning.py
 
-   Melakukan pembersihan (cleaning) atau normalisasi data hasil scraping sebelum di import ke database. Script ini digunakan dengan tujuan agar data hasil scraping bisa langsung masuk ke produksi dan tidak perlu melalui proses staging lagi 
+   Melakukan pembersihan (cleaning) atau normalisasi data hasil scraping sebelum di import ke database. Script ini digunakan dengan tujuan agar data hasil scraping bisa langsung masuk ke produksi dan tidak perlu melalui proses staging lagi
+
+TAMBAHAN
+
+- backup_master.bat
+
+  Digunakan untuk mengotomatisasi penghapusan dan pem-backupan file master (data_listing_badan_usaha_minerbaone.csv)
+
+  
+- backup_data.bat
+
+  Digunakan untuk mengotomatisasi pem-backupan file-file data hasil scraping
