@@ -27,9 +27,9 @@ TAMBAHAN
 
 - backup_master.bat
 
-  Digunakan untuk mengotomatisasi penghapusan dan pem-backupan file master (data_listing_badan_usaha_minerbaone.csv)
+  Digunakan untuk mengotomatisasi backup file master (data_listing_badan_usaha_minerbaone.csv)
 
   
 - backup_data.bat
 
-  Digunakan untuk mengotomatisasi pem-backupan file-file data hasil scraping
+  Digunakan untuk mengotomatisasi backup file-file data hasil scraping
