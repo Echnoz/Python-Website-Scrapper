@@ -11,9 +11,7 @@ for /f "tokens=*" %%T in ('powershell -NoProfile -Command "Get-Date -Format 'dd-
 set BACKUP_FOLDER=%BACKUP_ROOT%\%TIMESTAMP%
 
 if not exist "%TARGET_FILE%" (
-    echo [ERROR] File tidak ditemukan: %TARGET_FILE%
-    echo.
-    echo Proses dibatalkan
+    echo [ERROR] File tidak ditemukan
     pause
     exit /b 1
 )
@@ -23,13 +21,22 @@ mkdir "%BACKUP_FOLDER%"
 
 copy /Y "%TARGET_FILE%" "%BACKUP_FOLDER%\%TARGET_FILE%" >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [ERROR] Gagal membuat backup
+    echo [ERROR] Gagal membuat backup & file belum terhapus
     pause
     exit /b 1
 )
 
 echo [OK] Backup berhasil disimpan di:
 echo      %BACKUP_FOLDER%\%TARGET_FILE%
+
+del /F /Q "%TARGET_FILE%"
+if %errorlevel% neq 0 (
+    echo [ERROR] Backup berhasil TAPI file belum terhapus 
+    pause
+    exit /b 1
+)
+
+echo [OK] File master berhasil dihapus: %TARGET_FILE%
 echo.
 echo Backup selesai
 pause
