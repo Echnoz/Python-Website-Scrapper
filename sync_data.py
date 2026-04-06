@@ -7,7 +7,7 @@ Guide:
 Catatan:
   1. Mode DRY_RUN ada di baris/line ke-18  
   2. Script otomatis membuat backup sebelum menghapus data
-     Backup disimpan di folder 'backup_sinkronisasi/'
+     Backup disimpan di folder 'backup_file_data/'
 """
 
 import os
@@ -16,7 +16,7 @@ import pandas as pd
 from datetime import datetime
 
 #Config
-DRY_RUN = True   #True = hanya tampilkan perubahan tanpa eksekusi sinkronisasi
+DRY_RUN = False   #True = hanya tampilkan perubahan tanpa eksekusi sinkronisasi
 
 FILE_MASTER    = "data_listing_badan_usaha_minerbaone.csv"
 FILE_INFO      = "1_Informasi_Badan_Usaha.csv"
@@ -27,7 +27,7 @@ FILE_PERIZINAN = "4_Daftar_Perizinan.csv"
 #kolom penghubung di setiap file hasil scraping
 KOLOM_KUNCI = "Nama Perusahaan Asal" #foreign key ke file master
 
-FOLDER_BACKUP = "backup_sinkronisasi"
+FOLDER_BACKUP = "backup_file_data"
 
 
 #Utility
@@ -156,7 +156,7 @@ def tampilkan_ringkasan(perusahaan_hilang, hasil_per_file):
 
     print()
 
-# MAIN
+#MAIN
 def main():
     print("=" * 65)
     if DRY_RUN:

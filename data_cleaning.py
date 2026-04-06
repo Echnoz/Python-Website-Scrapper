@@ -245,10 +245,6 @@ def clean_no(val):
 
 
 def clean_no_with_default(val):
-    """
-    Sama seperti clean_no, tetapi pseudo-null ('tidak ada data', '-', kosong)
-    dikembalikan sebagai 0, bukan None.
-    """
     if val is None or (isinstance(val, float) and np.isnan(val)):
         return 0
     if str(val).strip().lower() in PSEUDO_NULL_VALUES:
