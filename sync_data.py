@@ -7,7 +7,7 @@ Guide:
 Catatan:
   1. Mode DRY_RUN ada di baris/line ke-18  
   2. Script otomatis membuat backup sebelum menghapus data
-     Backup disimpan di folder 'backup_file_data/'
+     Backup disimpan di folder 'backup_sinkronisasi_data/'
 """
 
 import os
@@ -27,7 +27,7 @@ FILE_PERIZINAN = "4_Daftar_Perizinan.csv"
 #kolom penghubung di setiap file hasil scraping
 KOLOM_KUNCI = "Nama Perusahaan Asal" #foreign key ke file master
 
-FOLDER_BACKUP = "backup_file_data"
+FOLDER_BACKUP = "backup_sinkronisasi_data"
 
 
 #Utility
