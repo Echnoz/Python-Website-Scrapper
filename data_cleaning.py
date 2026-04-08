@@ -179,6 +179,19 @@ def clean_kode_badan_usaha(val):
     return val if val else None
 
 def parse_date_indonesia(val):
+    """
+    Parse tanggal dari berbagai format sumber dan kembalikan dalam format YYYY-MM-DD
+    (sesuai format PostgreSQL DATE).
+    Format sumber yang ditangani:
+      - 'D Bulan YYYY'       : '30 Maret 2023'   -> '2023-03-30'
+      - 'D Month YYYY'       : '4 October 2021'  -> '2021-10-04'
+      - 'DD-Mon-YY'          : '12-Nov-14'        -> '2014-11-12'
+      - 'DD-Mon-YYYY'        : '6-Nov-2023'       -> '2023-11-06'
+      - 'YYYY-MM-DD'         : '2023-03-30'       -> '2023-03-30' (sudah benar)
+      - 'DD/MM/YY'           : '06/11/14'         -> '2014-11-06'
+      - 'DD/MM/YYYY'         : '06/11/2023'       -> '2023-11-06'
+      - 'DD-MM-YYYY'         : '30-03-2023'       -> '2023-03-30'
+    """
     if is_pseudo_null(val):
         return None
     s = str(val).strip()
@@ -188,7 +201,7 @@ def parse_date_indonesia(val):
         day, mon_str, yr = m.group(1), m.group(2).lower(), m.group(3)
         mon = BULAN_ID.get(mon_str) or MONTH_EN_ABBR.get(mon_str[:3])
         if mon:
-            return f"{int(day):02d}/{mon}/{yr}"
+            return f"{yr}-{mon}-{int(day):02d}"
 
     m = re.fullmatch(r"(\d{1,2})-([A-Za-z]{3})-(\d{2,4})", s)
     if m:
@@ -197,22 +210,22 @@ def parse_date_indonesia(val):
         if mon:
             if len(yr) == 2:
                 yr = "20" + yr
-            return f"{int(day):02d}/{mon}/{yr}"
+            return f"{yr}-{mon}-{int(day):02d}"
 
     m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", s)
     if m:
-        return f"{m.group(3)}/{m.group(2)}/{m.group(1)}"
+        return s
 
     m = re.fullmatch(r"(\d{1,2})/(\d{1,2})/(\d{2,4})", s)
     if m:
         day, mon, yr = m.group(1), m.group(2), m.group(3)
         if len(yr) == 2:
             yr = "20" + yr
-        return f"{int(day):02d}/{int(mon):02d}/{yr}"
+        return f"{yr}-{int(mon):02d}-{int(day):02d}"
 
     m = re.fullmatch(r"(\d{2})-(\d{2})-(\d{4})", s)
     if m:
-        return f"{m.group(1)}/{m.group(2)}/{m.group(3)}"
+        return f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
 
     print(f"  [WARN] Tanggal tidak dapat di-parse: {s!r}")
     return s
@@ -384,7 +397,7 @@ def clean_dataframe(df_raw, file_key):
         df["kode_badan_usaha"] = df["kode_badan_usaha"].apply(clean_kode_badan_usaha)
         print("  [DTYPE] kode_badan_usaha → VARCHAR")
 
-    #normalisasi tanggal ke DD/MM/YYYY
+    #normalisasi tanggal ke YYYY-MM-DD
     for col in DATE_COLS.get(file_key, []):
         if col in df.columns:
             df[col] = [
@@ -418,6 +431,10 @@ def clean_dataframe(df_raw, file_key):
     if "luas_ha" in df.columns:
         df["luas_ha"] = df["luas_ha"].apply(clean_numeric)
         print("  [DTYPE] luas_ha → Numeric nullable")
+
+    #tambah kolom tgl_import: tanggal hari ini saat script dijalankan (format YYYY-MM-DD)
+    df["tgl_import"] = datetime.now().strftime("%Y-%m-%d")
+    print(f"  [IMPORT] tgl_import diisi: {datetime.now().strftime('%Y-%m-%d')} ({len(df)} baris)")
 
     print(f"  Shape akhir: {df.shape}")
     return df
